@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server"
-import { connectDB } from "@/lib/db"
-import { Review } from "@/lib/models/review"
+import { db } from "@/db/index"
+import { reviews } from "@/db/schema"
+import { desc } from "drizzle-orm"
 
 export async function GET() {
   try {
-    await connectDB()
-    const reviews = await Review.find().sort({ createdAt: -1 }).lean()
-    return NextResponse.json(reviews)
+    const all = await db.select().from(reviews).orderBy(desc(reviews.createdAt))
+    return NextResponse.json(all)
   } catch {
     return NextResponse.json(
       { error: "Failed to fetch reviews" },
@@ -18,8 +18,11 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    await connectDB()
-    const review = await Review.create(body)
+    const { name, email, rating, message } = body
+    const [review] = await db
+      .insert(reviews)
+      .values({ name, email, rating, message })
+      .returning()
     return NextResponse.json(review, { status: 201 })
   } catch {
     return NextResponse.json(
