@@ -18,7 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Reveal } from "@/components/reveal"
 
 interface Review {
-  _id: string
+  id: number
   name: string
   email: string
   rating: number
@@ -70,11 +70,11 @@ export function SectionReviews() {
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState("")
 
-  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<number | null>(null)
   const [editForm, setEditForm] = useState({ name: "", email: "", rating: 0, message: "" })
 
   const [verifyEmail, setVerifyEmail] = useState("")
-  const [verifyTarget, setVerifyTarget] = useState<{ id: string; action: "edit" | "delete" } | null>(null)
+  const [verifyTarget, setVerifyTarget] = useState<{ id: number; action: "edit" | "delete" } | null>(null)
   const [verifyError, setVerifyError] = useState("")
 
   useEffect(() => {
@@ -99,7 +99,7 @@ export function SectionReviews() {
         body: JSON.stringify(form),
       })
       if (!res.ok) throw new Error("Failed to submit")
-      const review = await res.json()
+      const review: Review = await res.json()
       setReviews((prev) => [review, ...prev])
       setForm({ name: "", email: "", rating: 0, message: "" })
       setSubmitted(true)
@@ -118,7 +118,7 @@ export function SectionReviews() {
       rating: review.rating,
       message: review.message,
     })
-    setEditingId(review._id)
+    setEditingId(review.id)
     setVerifyTarget(null)
     setVerifyEmail("")
   }
@@ -132,15 +132,15 @@ export function SectionReviews() {
         body: JSON.stringify(editForm),
       })
       if (!res.ok) throw new Error("Failed to update")
-      const updated = await res.json()
-      setReviews((prev) => prev.map((r) => (r._id === editingId ? updated : r)))
+      const updated: Review = await res.json()
+      setReviews((prev) => prev.map((r) => (r.id === editingId ? updated : r)))
       setEditingId(null)
     } catch {
       setError("Failed to update review")
     }
   }
 
-  async function handleDelete(id: string) {
+  async function handleDelete(id: number) {
     try {
       const res = await fetch(`/api/reviews/${id}`, {
         method: "DELETE",
@@ -148,7 +148,7 @@ export function SectionReviews() {
         body: JSON.stringify({ email: verifyEmail }),
       })
       if (!res.ok) throw new Error("Failed to delete")
-      setReviews((prev) => prev.filter((r) => r._id !== id))
+      setReviews((prev) => prev.filter((r) => r.id !== id))
       setVerifyTarget(null)
       setVerifyEmail("")
     } catch {
@@ -156,7 +156,7 @@ export function SectionReviews() {
     }
   }
 
-  function promptVerify(id: string, action: "edit" | "delete") {
+  function promptVerify(id: number, action: "edit" | "delete") {
     setVerifyTarget({ id, action })
     setVerifyEmail("")
     setVerifyError("")
@@ -164,7 +164,7 @@ export function SectionReviews() {
 
   function handleVerify() {
     if (!verifyTarget) return
-    const review = reviews.find((r) => r._id === verifyTarget.id)
+    const review = reviews.find((r) => r.id === verifyTarget.id)
     if (!review) return
 
     if (review.email !== verifyEmail) {
@@ -285,9 +285,9 @@ export function SectionReviews() {
               </div>
             ) : (
               reviews.map((review) => (
-                <Card key={review._id} className="border-border/50 bg-card/60 shadow-sm backdrop-blur-sm transition-all duration-300 hover:shadow-md">
+                <Card key={review.id} className="border-border/50 bg-card/60 shadow-sm backdrop-blur-sm transition-all duration-300 hover:shadow-md">
                   <CardContent className="pt-4">
-                    {editingId === review._id ? (
+                    {editingId === review.id ? (
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
                           <h4 className="text-sm font-medium">Edit Review</h4>
@@ -350,14 +350,14 @@ export function SectionReviews() {
                           <div className="flex items-center gap-1">
                             <StarRating value={review.rating} readonly />
                             <button
-                              onClick={() => promptVerify(review._id, "edit")}
+                              onClick={() => promptVerify(review.id, "edit")}
                               className="ml-1 rounded p-1 text-muted-foreground/40 transition-colors hover:bg-accent hover:text-foreground"
                               title="Edit"
                             >
                               <Pencil className="h-3 w-3" />
                             </button>
                             <button
-                              onClick={() => promptVerify(review._id, "delete")}
+                              onClick={() => promptVerify(review.id, "delete")}
                               className="rounded p-1 text-muted-foreground/40 transition-colors hover:bg-accent hover:text-red-500"
                               title="Delete"
                             >
@@ -371,7 +371,7 @@ export function SectionReviews() {
                       </>
                     )}
 
-                    {verifyTarget && verifyTarget.id === review._id && (
+                    {verifyTarget && verifyTarget.id === review.id && (
                       <div className="mt-3 rounded-lg border border-border/50 bg-muted/50 p-3">
                         <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                           <Lock className="h-3 w-3" />

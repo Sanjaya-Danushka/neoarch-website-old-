@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
-import { connectDB } from "@/lib/db"
-import { Review } from "@/lib/models/review"
+import { db } from "@/db/index"
+import { reviews } from "@/db/schema"
+import { eq } from "drizzle-orm"
 
 export async function PUT(
   req: Request,
@@ -9,18 +10,30 @@ export async function PUT(
   try {
     const { id } = await params
     const body = await req.json()
-    await connectDB()
 
-    const review = await Review.findById(id)
-    if (!review) {
+    const [existing] = await db
+      .select()
+      .from(reviews)
+      .where(eq(reviews.id, Number(id)))
+
+    if (!existing) {
       return NextResponse.json({ error: "Review not found" }, { status: 404 })
     }
 
-    if (review.email !== body.email) {
+    if (existing.email !== body.email) {
       return NextResponse.json({ error: "Email mismatch" }, { status: 403 })
     }
 
-    const updated = await Review.findByIdAndUpdate(id, body, { new: true })
+    const [updated] = await db
+      .update(reviews)
+      .set({
+        name: body.name,
+        rating: body.rating,
+        message: body.message,
+      })
+      .where(eq(reviews.id, Number(id)))
+      .returning()
+
     return NextResponse.json(updated)
   } catch {
     return NextResponse.json(
@@ -37,18 +50,21 @@ export async function DELETE(
   try {
     const { id } = await params
     const { email } = await req.json()
-    await connectDB()
 
-    const review = await Review.findById(id)
-    if (!review) {
+    const [existing] = await db
+      .select()
+      .from(reviews)
+      .where(eq(reviews.id, Number(id)))
+
+    if (!existing) {
       return NextResponse.json({ error: "Review not found" }, { status: 404 })
     }
 
-    if (review.email !== email) {
+    if (existing.email !== email) {
       return NextResponse.json({ error: "Email mismatch" }, { status: 403 })
     }
 
-    await Review.findByIdAndDelete(id)
+    await db.delete(reviews).where(eq(reviews.id, Number(id)))
     return NextResponse.json({ success: true })
   } catch {
     return NextResponse.json(
